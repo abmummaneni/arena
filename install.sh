@@ -12,20 +12,26 @@
 
 # Defaults
 PLATFORM="runpod"
-CONDA_ENV="arena-env"
+CONDA_ENV="arena"
 PYTHON_VERSION="3.11"
 CLONE_LLM_CONTEXT=true
 
 # Parse args
 while [[ $# -gt 0 ]]; do
-    case $1 in
-        --platform)
-            PLATFORM="$2"
-            shift 2
-            ;;
-        --no-llm-context) CLONE_LLM_CONTEXT=false; shift ;;
-        *) echo "Unknown option: $1"; exit 1 ;;
-    esac
+  case $1 in
+  --platform)
+    PLATFORM="$2"
+    shift 2
+    ;;
+  --no-llm-context)
+    CLONE_LLM_CONTEXT=false
+    shift
+    ;;
+  *)
+    echo "Unknown option: $1"
+    exit 1
+    ;;
+  esac
 done
 
 echo "=== Setup: platform=$PLATFORM, clone_llm_context=$CLONE_LLM_CONTEXT ==="
@@ -55,17 +61,17 @@ echo "=== Active Python: $(which python) ==="
 # --- Install git ---
 echo "=== Installing system packages ==="
 if [[ "$PLATFORM" == "runpod" ]]; then
-    apt update && apt install -y git curl
+  apt update && apt install -y git curl
 elif [[ "$PLATFORM" == "vastai" ]]; then
-    sudo apt update && sudo apt install -y git
+  sudo apt update && sudo apt install -y git
 fi
 
 # Maybe clone the repo which gives you extra context for LLMs (to help with exercises)
 if $CLONE_LLM_CONTEXT; then
-    REPO="callummcdougall/arena-llm-context"
-    BRANCH="main"
-    echo "=== Cloning $REPO (branch: $BRANCH) ==="
-    git clone -b "$BRANCH" "https://github.com/${REPO}.git"
+  REPO="callummcdougall/arena-llm-context"
+  BRANCH="main"
+  echo "=== Cloning $REPO (branch: $BRANCH) ==="
+  git clone -b "$BRANCH" "https://github.com/${REPO}.git"
 fi
 
 # # --- Git config ---
@@ -86,7 +92,7 @@ echo "=== Configuring VS Code workspace settings ==="
 
 HOME_DIR="$HOME"
 mkdir -p "$HOME_DIR/.vscode"
-cat > "$HOME_DIR/.vscode/settings.json" << EOF
+cat >"$HOME_DIR/.vscode/settings.json" <<EOF
 {
     "python.defaultInterpreterPath": "$HOME_DIR/miniconda3/envs/$CONDA_ENV/bin/python",
     "python.analysis.extraPaths": [
@@ -100,3 +106,4 @@ cat > "$HOME_DIR/.vscode/settings.json" << EOF
 EOF
 
 echo "=== Done! ==="
+
