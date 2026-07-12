@@ -223,9 +223,9 @@ branch = "main"
 # try:
 #     import transformer_lens
 # except:
-#     %pip install "openai==1.56.1" einops datasets jaxtyping "sae-lens>=4.0.0,<5.0.0" openai tabulate umap-learn hdbscan eindex-callum git+https://github.com/callummcdougall/CircuitsVis.git#subdirectory=python git+https://github.com/callummcdougall/sae_vis.git@callum/v3 transformer_lens==2.11.0
+#     %pip install "openai==1.56.1" einops datasets jaxtyping "sae-lens>=4.0.0,<5.0.0" openai tabulate umap-learn hdbscan eindex-callum git+https://github.com/callummcdougall/CircuitsVis.git#subdirectory=python git+https://github.com/callummcdougall/sae_vis.git@callum/v3 transformer_lens==2.17.0
 
-# Get root directory, handling 3 different cases: (1) Colab, (2) notebook not in ARENA repo, (3) notebook in ARENA repo
+# # Get root directory, handling 3 different cases: (1) Colab, (2) notebook not in ARENA repo, (3) notebook in ARENA repo
 root = (
     "/content"
     if IN_COLAB
@@ -294,7 +294,7 @@ dtype = t.bfloat16
 
 # Make sure exercises are in the path
 chapter = "chapter1_transformer_interp"
-section = "part31_probing_for_deception"
+section = "part31_linear_probes"
 root_dir = next(p for p in Path.cwd().parents if (p / chapter).exists())
 exercises_dir = root_dir / chapter / "exercises"
 section_dir = exercises_dir / section
@@ -303,8 +303,8 @@ if str(exercises_dir) not in sys.path:
     sys.path.append(str(exercises_dir))
 # END FILTERS
 
-import part31_probing_for_deception.tests as tests
-import part31_probing_for_deception.utils as utils
+import part31_linear_probes.tests as tests
+import part31_linear_probes.utils as utils
 
 MAIN = __name__ == "__main__"
 
@@ -435,6 +435,7 @@ r'''
 > ```
 
 Implement a function that extracts the last-token hidden state from specified layers for a batch of statements. You'll need to:
+
 1. Tokenize the statements with padding
 2. Run the forward pass with `output_hidden_states=True`
 3. For each sequence, find the index of the last non-padding token using `attention_mask`
@@ -532,11 +533,13 @@ if MAIN and FLAG_RUN_SECTION_1:
     # Extract activations at the probe layer for all datasets
     activations = {}
     labels_dict = {}
+    statements_dict = {}
 
     for name in DATASET_NAMES:
         df = datasets[name]
         statements = df["statement"].tolist()
         labs = t.tensor(df["label"].values, dtype=t.float32)
+        statements_dict[name] = statements
 
         acts = extract_activations(statements, model, tokenizer, [PROBE_LAYER])
         activations[name] = acts[PROBE_LAYER]
@@ -659,6 +662,7 @@ if MAIN and FLAG_RUN_SECTION_1:
     for i, name in enumerate(DATASET_NAMES):
         acts = activations[name]
         labs = labels_dict[name]
+        prompts = statements_dict[name]
         pcs = get_pca_components(acts, k=2)
         X_centered = acts - acts.mean(dim=0)
         projected = (X_centered @ pcs).numpy()
@@ -677,6 +681,15 @@ if MAIN and FLAG_RUN_SECTION_1:
                 marker=dict(color=colors, size=3, opacity=0.5),
                 name=name,
                 showlegend=False,
+                hovertext=prompts,
+                customdata=list(zip(prompts, label_text)),
+                hovertemplate=(
+                    "<b>%{customdata[1]}</b><br>"
+                    "%{customdata[0]}<br>"
+                    "PC1: %{x:.2f}<br>"
+                    "PC2: %{y:.2f}"
+                    "<extra></extra>"
+                ),
             ),
             row=1,
             col=i + 1,
@@ -704,7 +717,7 @@ if MAIN and FLAG_RUN_SECTION_1:
 # ! TAGS: [html,st-dropdown[Click to see the expected output]]
 
 r'''
-<div style="text-align: left"><embed src="https://info-arena.github.io/ARENA_img/misc/media-131-new/13102.html"></div>
+<div style="text-align: left; overflow-x: auto; background-color: white;"><embed src="https://info-arena.github.io/ARENA_img/misc/media-131-new/13102.html" width="1220" height="420"></div>
 '''
 
 # ! CELL TYPE: markdown
@@ -870,8 +883,8 @@ if MAIN and FLAG_RUN_SECTION_1:
 # ! TAGS: [html,st-dropdown[Click to see the expected output]]
 
 r'''
-<div style="text-align: left"><embed src="https://info-arena.github.io/ARENA_img/misc/media-131-new/13103.html"></div>
-<div style="text-align: left"><embed src="https://info-arena.github.io/ARENA_img/misc/media-131-new/13104.html"></div>
+<div style="text-align: left; overflow-x: auto; background-color: white;"><embed src="https://info-arena.github.io/ARENA_img/misc/media-131-new/13103.html" width="540" height="1496"></div>
+<div style="text-align: left; overflow-x: auto; background-color: white;"><embed src="https://info-arena.github.io/ARENA_img/misc/media-131-new/13104.html" width="820" height="420"></div>
 
 <pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace">Best layer by test accuracy: 9 (0.963)
 Configured probe layer: 14 (0.953)</pre>
@@ -960,6 +973,7 @@ r'''
 > ```
 
 Implement the Mass-Mean (difference-of-means) probe as a PyTorch `nn.Module`. The key components:
+
 * `direction`: the vector `mean(true_acts) - mean(false_acts)`, stored as a non-trainable parameter
 * `covariance`: the pooled within-class covariance matrix (for optional IID-corrected evaluation)
 * `forward(x, iid=False)`: returns `sigmoid(x @ direction)`, or `sigmoid(x @ inv_cov @ direction)` if `iid=True`
@@ -1241,8 +1255,8 @@ r'''
 
 Cosine similarity between MM and LR directions: 0.6393</pre>
 
-<div style="text-align: left"><embed src="https://info-arena.github.io/ARENA_img/misc/media-131-new/13105.html"></div>
-<div style="text-align: left"><embed src="https://info-arena.github.io/ARENA_img/misc/media-131-new/13106.html"></div>
+<div style="text-align: left; overflow-x: auto; background-color: white;"><embed src="https://info-arena.github.io/ARENA_img/misc/media-131-new/13105.html" width="540" height="164"></div>
+<div style="text-align: left; overflow-x: auto; background-color: white;"><embed src="https://info-arena.github.io/ARENA_img/misc/media-131-new/13106.html" width="620" height="420"></div>
 '''
 
 # ! CELL TYPE: markdown
@@ -1366,7 +1380,7 @@ if MAIN and FLAG_RUN_SECTION_2:
 # ! TAGS: [html,st-dropdown[Click to see the expected output]]
 
 r'''
-<div style="text-align: left"><embed src="https://info-arena.github.io/ARENA_img/misc/media-131-new/13107.html"></div>
+<div style="text-align: left; overflow-x: auto; background-color: white;"><embed src="https://info-arena.github.io/ARENA_img/misc/media-131-new/13107.html" width="540" height="164"></div>
 '''
 
 # ! CELL TYPE: markdown
@@ -1618,7 +1632,7 @@ r'''
 Mean P(TRUE)-P(FALSE) for true statements:  0.7853
 Mean P(TRUE)-P(FALSE) for false statements: -0.9150</pre>
 
-<div style="text-align: left"><embed src="https://info-arena.github.io/ARENA_img/misc/media-131-new/13112.html"></div>
+<div style="text-align: left; overflow-x: auto; background-color: white;"><embed src="https://info-arena.github.io/ARENA_img/misc/media-131-new/13112.html" width="720" height="420"></div>
 '''
 
 # ! CELL TYPE: markdown
@@ -1904,8 +1918,8 @@ if MAIN and FLAG_RUN_SECTION_3:
 # ! TAGS: [html,st-dropdown[Click to see the expected output]]
 
 r'''
-<div style="text-align: left"><embed src="https://info-arena.github.io/ARENA_img/misc/media-131-new/13113.html"></div>
-<div style="text-align: left"><embed src="https://info-arena.github.io/ARENA_img/misc/media-131-new/13114.html"></div>
+<div style="text-align: left; overflow-x: auto; background-color: white;"><embed src="https://info-arena.github.io/ARENA_img/misc/media-131-new/13113.html" width="540" height="164"></div>
+<div style="text-align: left; overflow-x: auto; background-color: white;"><embed src="https://info-arena.github.io/ARENA_img/misc/media-131-new/13114.html" width="620" height="420"></div>
 '''
 
 # ! CELL TYPE: markdown
@@ -2017,8 +2031,8 @@ if MAIN and FLAG_RUN_SECTION_3:
 # ! TAGS: [html,st-dropdown[Click to see the expected output]]
 
 r'''
-<div style="text-align: left"><embed src="https://info-arena.github.io/ARENA_img/misc/media-131-new/13115.html"></div>
-<div style="text-align: left"><embed src="https://info-arena.github.io/ARENA_img/misc/media-131-new/13116.html"></div>
+<div style="text-align: left; overflow-x: auto; background-color: white;"><embed src="https://info-arena.github.io/ARENA_img/misc/media-131-new/13115.html" width="540" height="200"></div>
+<div style="text-align: left; overflow-x: auto; background-color: white;"><embed src="https://info-arena.github.io/ARENA_img/misc/media-131-new/13116.html" width="620" height="420"></div>
 '''
 
 # ! CELL TYPE: markdown
@@ -2544,9 +2558,9 @@ if MAIN and FLAG_RUN_SECTION_4:
 # ! TAGS: [html,st-dropdown[Click to see the expected output]]
 
 r'''
-<div style="text-align: left"><embed src="https://info-arena.github.io/ARENA_img/misc/media-131-new/13118.html"></div>
-<div style="text-align: left"><embed src="https://info-arena.github.io/ARENA_img/misc/media-131-new/13119.html"></div>
-<div style="text-align: left"><embed src="https://info-arena.github.io/ARENA_img/misc/media-131-new/13120.html"></div>
+<div style="text-align: left; overflow-x: auto; background-color: white;"><embed src="https://info-arena.github.io/ARENA_img/misc/media-131-new/13118.html" width="540" height="128"></div>
+<div style="text-align: left; overflow-x: auto; background-color: white;"><embed src="https://info-arena.github.io/ARENA_img/misc/media-131-new/13119.html" width="620" height="470"></div>
+<div style="text-align: left; overflow-x: auto; background-color: white;"><embed src="https://info-arena.github.io/ARENA_img/misc/media-131-new/13120.html" width="620" height="420"></div>
 '''
 
 # ! CELL TYPE: markdown
@@ -2916,12 +2930,12 @@ if MAIN and FLAG_RUN_SECTION_4:
 # ! TAGS: [html,st-dropdown[Click to see the expected output]]
 
 r'''
-<div style="text-align: left"><embed src="https://info-arena.github.io/ARENA_img/misc/media-131-new/13126_ai_liar_0_Deceptive_8b.html"></div>
-<div style="text-align: left"><embed src="https://info-arena.github.io/ARENA_img/misc/media-131-new/13126_ai_liar_0_Honest_8b.html"></div>
-<div style="text-align: left"><embed src="https://info-arena.github.io/ARENA_img/misc/media-131-new/13126_ai_liar_1_Deceptive_8b.html"></div>
-<div style="text-align: left"><embed src="https://info-arena.github.io/ARENA_img/misc/media-131-new/13126_ai_liar_1_Honest_8b.html"></div>
-<div style="text-align: left"><embed src="https://info-arena.github.io/ARENA_img/misc/media-131-new/13126_ai_liar_2_Deceptive_8b.html"></div>
-<div style="text-align: left"><embed src="https://info-arena.github.io/ARENA_img/misc/media-131-new/13126_ai_liar_2_Honest_8b.html"></div>
+<div style="text-align: left; overflow-x: auto; background-color: white;"><embed src="https://info-arena.github.io/ARENA_img/misc/media-131-new/13126_ai_liar_0_Deceptive_8b.html" width="920" height="470"></div>
+<div style="text-align: left; overflow-x: auto; background-color: white;"><embed src="https://info-arena.github.io/ARENA_img/misc/media-131-new/13126_ai_liar_0_Honest_8b.html" width="920" height="470"></div>
+<div style="text-align: left; overflow-x: auto; background-color: white;"><embed src="https://info-arena.github.io/ARENA_img/misc/media-131-new/13126_ai_liar_1_Deceptive_8b.html" width="920" height="470"></div>
+<div style="text-align: left; overflow-x: auto; background-color: white;"><embed src="https://info-arena.github.io/ARENA_img/misc/media-131-new/13126_ai_liar_1_Honest_8b.html" width="920" height="470"></div>
+<div style="text-align: left; overflow-x: auto; background-color: white;"><embed src="https://info-arena.github.io/ARENA_img/misc/media-131-new/13126_ai_liar_2_Deceptive_8b.html" width="920" height="470"></div>
+<div style="text-align: left; overflow-x: auto; background-color: white;"><embed src="https://info-arena.github.io/ARENA_img/misc/media-131-new/13126_ai_liar_2_Honest_8b.html" width="920" height="470"></div>
 
 <pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace">--- AI Liar: assistant-only probe scores (MM direction) ---
   Honest mean score:    1.975 (std=0.167)
@@ -3150,14 +3164,14 @@ if MAIN and FLAG_RUN_SECTION_4_70B:
 # ! TAGS: [html,st-dropdown[Click to see the expected output]]
 
 r'''
-<div style="text-align: left"><embed src="https://info-arena.github.io/ARENA_img/misc/media-131-new/13124_ai_liar_0_Deceptive_70b.html"></div>
-<div style="text-align: left"><embed src="https://info-arena.github.io/ARENA_img/misc/media-131-new/13124_ai_liar_0_Honest_70b.html"></div>
-<div style="text-align: left"><embed src="https://info-arena.github.io/ARENA_img/misc/media-131-new/13124_ai_liar_1_Deceptive_70b.html"></div>
-<div style="text-align: left"><embed src="https://info-arena.github.io/ARENA_img/misc/media-131-new/13124_ai_liar_1_Honest_70b.html"></div>
-<div style="text-align: left"><embed src="https://info-arena.github.io/ARENA_img/misc/media-131-new/13124_ai_liar_2_Deceptive_70b.html"></div>
-<div style="text-align: left"><embed src="https://info-arena.github.io/ARENA_img/misc/media-131-new/13124_ai_liar_2_Honest_70b.html"></div>
+<div style="text-align: left; overflow-x: auto; background-color: white;"><embed src="https://info-arena.github.io/ARENA_img/misc/media-131-new/13124_ai_liar_0_Deceptive_70b.html" width="920" height="470"></div>
+<div style="text-align: left; overflow-x: auto; background-color: white;"><embed src="https://info-arena.github.io/ARENA_img/misc/media-131-new/13124_ai_liar_0_Honest_70b.html" width="920" height="470"></div>
+<div style="text-align: left; overflow-x: auto; background-color: white;"><embed src="https://info-arena.github.io/ARENA_img/misc/media-131-new/13124_ai_liar_1_Deceptive_70b.html" width="920" height="470"></div>
+<div style="text-align: left; overflow-x: auto; background-color: white;"><embed src="https://info-arena.github.io/ARENA_img/misc/media-131-new/13124_ai_liar_1_Honest_70b.html" width="920" height="470"></div>
+<div style="text-align: left; overflow-x: auto; background-color: white;"><embed src="https://info-arena.github.io/ARENA_img/misc/media-131-new/13124_ai_liar_2_Deceptive_70b.html" width="920" height="470"></div>
+<div style="text-align: left; overflow-x: auto; background-color: white;"><embed src="https://info-arena.github.io/ARENA_img/misc/media-131-new/13124_ai_liar_2_Honest_70b.html" width="920" height="470"></div>
 
-<div style="text-align: left"><embed src="https://info-arena.github.io/ARENA_img/misc/media-131-new/13125.html"></div>
+<div style="text-align: left; overflow-x: auto; background-color: white;"><embed src="https://info-arena.github.io/ARENA_img/misc/media-131-new/13125.html" width="920" height="470"></div>
 '''
 
 # ! CELL TYPE: markdown
@@ -3828,7 +3842,7 @@ LRProbe     (last token)              0.962
 LRProbe     (mean pool)               0.991
 AttentionProbe (full seq)             0.994  &lt;-- best</pre>
 
-<div style="text-align: left"><embed src="https://info-arena.github.io/ARENA_img/misc/media-131-new/13128.html"></div>
+<div style="text-align: left; overflow-x: auto; background-color: white;"><embed src="https://info-arena.github.io/ARENA_img/misc/media-131-new/13128.html" width="670" height="470"></div>
 '''
 
 # ! CELL TYPE: markdown
@@ -4004,8 +4018,8 @@ if MAIN and FLAG_RUN_SECTION_5:
 # ! TAGS: [html,st-dropdown[Click to see the expected output]]
 
 r'''
-<div style="text-align: left"><embed src="https://info-arena.github.io/ARENA_img/misc/media-131-new/13130_bar_0.html"></div>
-<div style="text-align: left"><embed src="https://info-arena.github.io/ARENA_img/misc/media-131-new/13130_bar_1.html"></div>
+<div style="text-align: left; overflow-x: auto; background-color: white;"><embed src="https://info-arena.github.io/ARENA_img/misc/media-131-new/13130_bar_0.html" width="785" height="320"></div>
+<div style="text-align: left; overflow-x: auto; background-color: white;"><embed src="https://info-arena.github.io/ARENA_img/misc/media-131-new/13130_bar_1.html" width="720" height="320"></div>
 '''
 
 # ! CELL TYPE: markdown

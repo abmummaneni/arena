@@ -265,9 +265,7 @@ def test_generalization(
         with model.disable_adapter():
             base_responses = generate_responses_locally(model, tokenizer, prompts, max_new_tokens=max_new_tokens)
 
-        misaligned_responses = generate_responses_locally(
-            model, tokenizer, prompts, max_new_tokens=max_new_tokens
-        )
+        misaligned_responses = generate_responses_locally(model, tokenizer, prompts, max_new_tokens=max_new_tokens)
 
         # Score and collect results
         for prompt, base_response, misaligned_response in tqdm(
@@ -1432,7 +1430,6 @@ def compute_response_kl(
     per_prompt_kl = (kl_per_token * response_mask).sum(dim=1) / response_mask.sum(dim=1)
     return per_prompt_kl.mean().item()
 
-# %%
 
 if MAIN:
     tests.test_compute_response_kl(compute_response_kl)

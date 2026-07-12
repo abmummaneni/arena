@@ -249,7 +249,7 @@ ipython.run_line_magic("autoreload", "2")
 # try:
 #     import transformer_lens
 # except:
-#     %pip install einops datasets jaxtyping "sae-lens>=4.0.0,<5.0.0" tabulate eindex-callum transformer_lens==2.11.0
+#     %pip install einops datasets jaxtyping "sae-lens>=4.0.0,<5.0.0" tabulate eindex-callum transformer_lens==2.17.0
 #     %pip install --force-reinstall numpy pandas
 
 # # Get root directory, handling 3 different cases: (1) Colab, (2) notebook not in ARENA repo, (3) notebook in ARENA repo
@@ -305,7 +305,7 @@ device = t.device("mps" if t.backends.mps.is_available() else "cuda" if t.cuda.i
 
 # Make sure exercises are in the path
 chapter = "chapter1_transformer_interp"
-section = "part31_superposition_and_saes"
+section = "part54_toy_models_of_superposition_and_saes"
 root_dir = next(p for p in Path.cwd().parents if (p / chapter).exists())
 exercises_dir = root_dir / chapter / "exercises"
 section_dir = exercises_dir / section
@@ -314,8 +314,8 @@ if str(exercises_dir) not in sys.path:
     sys.path.append(str(exercises_dir))
 # END FILTERS
 
-import part31_superposition_and_saes.tests as tests
-import part31_superposition_and_saes.utils as utils
+import part54_toy_models_of_superposition_and_saes.tests as tests
+import part54_toy_models_of_superposition_and_saes.utils as utils
 from plotly_utils import imshow, line
 
 MAIN = __name__ == "__main__"
@@ -4140,6 +4140,9 @@ If you want, you can also extend the function `generate_batch` so that it suppor
 # ! FILTERS: []
 # ! TAGS: []
 
+# EXERCISE
+# # YOUR CODE HERE - replicate figure 15a & 15b from the paper
+# END EXERCISE
 # SOLUTION
 def generate_batch(self: ToyModel, batch_size: int) -> Float[Tensor, "batch inst feats"]:
     """
@@ -4273,9 +4276,6 @@ if MAIN:
         ],
     )
 # END SOLUTION
-# EXERCISE
-# # YOUR CODE HERE - replicate figure 15a & 15b from the paper
-# END EXERCISE
 
 # ! CELL TYPE: markdown
 # ! FILTERS: [soln,st]

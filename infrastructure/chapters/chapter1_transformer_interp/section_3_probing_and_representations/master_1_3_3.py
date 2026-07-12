@@ -261,9 +261,9 @@ branch = "main"
 # try:
 #     import transformer_lens
 # except:
-#     %pip install "openai==1.56.1" einops datasets jaxtyping "sae-lens>=4.0.0,<5.0.0" openai tabulate umap-learn hdbscan eindex-callum git+https://github.com/callummcdougall/CircuitsVis.git#subdirectory=python git+https://github.com/callummcdougall/sae_vis.git@callum/v3 transformer_lens==2.11.0
+#     %pip install "openai==1.56.1" einops datasets jaxtyping "sae-lens>=4.0.0,<5.0.0" openai tabulate umap-learn hdbscan eindex-callum git+https://github.com/callummcdougall/CircuitsVis.git#subdirectory=python git+https://github.com/callummcdougall/sae_vis.git@callum/v3 transformer_lens==2.17.0
 
-# Get root directory, handling 3 different cases: (1) Colab, (2) notebook not in ARENA repo, (3) notebook in ARENA repo
+# # Get root directory, handling 3 different cases: (1) Colab, (2) notebook not in ARENA repo, (3) notebook in ARENA repo
 root = (
     "/content"
     if IN_COLAB
@@ -645,7 +645,7 @@ Any given SAE release may have multiple different mdoels. These might have been 
 # ! TAGS: []
 
 def format_value(value):
-    return "{{{0!r}: {1!r}, ...}}".format(*next(iter(value.items()))) if isinstance(value, dict) else repr(value)
+    return "{{{0!r}: {1!r}, ...}}".format(*next(iter(value.items()))) if isinstance(value, dict) and value else repr(value)
 
 
 if MAIN:
